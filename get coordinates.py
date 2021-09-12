@@ -9,7 +9,7 @@ h_cam = 100
 h_corner = w_corner = 60
 h_img = w_img = 800
 
-imgTest = "/home/kiencate/Documents/LearnCodePython/learn opencv/Screenshot from 2021-09-12 14-46-36.png"
+imgTest = "/home/kiencate/image-processing/Screenshot from 2021-09-12 14-46-36.png"
 #xac dinh vat the
 def getContours(img):
     contours,hierarchy = cv2.findContours(img, cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
