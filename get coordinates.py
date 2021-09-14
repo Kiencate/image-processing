@@ -30,7 +30,7 @@ def getContours(img):
 
 #xac dinh toa do vat the
 def dectect_coordinate(x,y,c):
-    cam_coordinate = (89.999999 , -179.9999)
+    cam_coordinate = (50 , 120)
     w_img_met = h_cam * math.tan(w_corner/360 * math.pi) *2 
     h_img_met = h_cam * math.tan(h_corner/360 * math.pi) *2 
     x_obj_met = (x - w_img/2) / w_img * w_img_met
