@@ -1,16 +1,40 @@
-import cv2
 import numpy as np
+import cv2
 import math
-imgTest = "/home/kiencate/image-processing/oiltank.png"
-# h_cam : chieu cao camera
-# h,w_corner : goc mo cua camera theo huong doc va ngang
-# h,w_img : kich co anh chup
-h_cam = 100
-h_corner = w_corner = 60
-h_img = w_img = 800
+
+img = cv2.imread('oiltank.jpg')
+gray = cv2.imread('oiltank.jpg', 0)
+blur = cv2.bilateralFilter(img,9,75,75)
+
+#############################    HSI CONVERSION    ###########################
+
+blur = np.divide(blur, 255.0)
+hsi = np.zeros((blur.shape[0],blur.shape[1],blur.shape[2]),dtype=np.float)
+ratio_map = np.zeros((blur.shape[0],blur.shape[1]),dtype=np.uint8)
+a= np.zeros((blur.shape[0],blur.shape[1]),dtype=np.float)
+
+for i in range(blur.shape[0]):
+    for j in range(blur.shape[1]):
+        hsi[i][j][2] = (blur[i][j][0]+blur[i][j][1]+blur[i][j][2])/3
+        hsi[i][j][0] = math.acos(((blur[i][j][2]-blur[i][j][1])*(blur[i][j][2]-blur[i][j][0]))/(2*math.sqrt((blur[i][j][2]-blur[i][j][1])*(blur[i][j][2]-blur[i][j][1])+(blur[i][j][2]-blur[i][j][0])*(blur[i][j][1]-blur[i][j][0]))))
+        hsi[i][j][1] = 1 - 3*min(blur[i][j][0],blur[i][j][1],blur[i][j][2])/hsi[i][j][2]
+        a[i][j] = hsi[i][j][0]/(hsi[i][j][2]) 
+        if np.isnan(a[i][j]):
+              a[i][j] = np.nan_to_num(a[i][j])
+        ratio_map[i][j]=a[i][j]                   
+
+###############################################################################
+ 
+#########################    OTSU'S METHOD    #################################
+
+hist = np.histogram(ratio_map.ravel(),256,[0,256])
+ret,th = cv2.threshold(ratio_map,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+mask= cv2.medianBlur(th,15)
+###############################################################################
+
+
+
 cres = [[]]
-
-
 def getContours(img):
     contours,hierarchy = cv2.findContours(img, cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
     a=0
@@ -61,7 +85,7 @@ def getContours(img):
                     min = dist2 + dist0- dist1
                     trungdiem2 = i
             cv2.circle(imgContour,(trungdiem2[0][0],trungdiem2[0][1]),1,(0,255,255),3)
-            print(diem1)
+            
             #them 4 diem vao mang
             cres.extend(diem1)
             cres.extend(diem2)
@@ -73,29 +97,24 @@ def getContours(img):
 
 
 
-img=cv2.imread(imgTest)
 imgContour = img.copy()
-imgHSV = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
-lower = np.array([80,13,51])
-upper = np.array([134,255,134])
-
-mask = cv2.inRange(imgHSV,lower,upper)
 getContours(mask)
 
 # ve vong tron
-if cres[3][1]<cres[7][1]:
-    tam = (cres[3]+cres[8])//2
-    r = int(np.linalg.norm(tam - cres[3]))
-else:
-    tam = (cres[4]+cres[7])//2
-    r = int(np.linalg.norm(tam - cres[4]))
-for i in range(9):
-    print(cres[i])
-cv2.circle(imgContour,(tam[0],tam[1]),r,(0,0,255),2)
- 
-cv2.imshow("a",imgContour)
-cv2.imshow("mask",mask)
-k= cv2.waitKey(0)
-
-
-
+# if cres[3][1]<cres[7][1]:
+#     tam = (cres[3]+cres[8])//2
+#     r = int(np.linalg.norm(tam - cres[3]))
+# else:
+#     tam = (cres[4]+cres[7])//2
+#     r = int(np.linalg.norm(tam - cres[4]))
+# for i in range(9):
+#     print(cres[i])
+# cv2.circle(imgContour,(tam[0],tam[1]),r,(0,0,255),2)
+while True:
+    
+    cv2.imshow("a",imgContour)
+    cv2.imshow("mask",img)
+    cv2.imshow("mask",mask)
+    k= cv2.waitKey(0)
+    if k==27:
+        break
