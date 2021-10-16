@@ -2,8 +2,10 @@ import numpy as np
 import cv2
 import math
 
-img = cv2.imread('oiltank.jpg')
-gray = cv2.imread('oiltank.jpg', 0)
+img = cv2.imread('oitank6.png')
+gray = cv2.imread('oitank6.png', 0)
+# img = img[0:215, 437:img.shape[1]-1]
+img = img[0:215, 207:408]
 blur = cv2.bilateralFilter(img,9,75,75)
 
 #############################    HSI CONVERSION    ###########################
@@ -29,7 +31,7 @@ for i in range(blur.shape[0]):
 
 hist = np.histogram(ratio_map.ravel(),256,[0,256])
 ret,th = cv2.threshold(ratio_map,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-mask= cv2.medianBlur(th,15)
+mask= cv2.medianBlur(th,9)
 ###############################################################################
 
 
@@ -101,15 +103,15 @@ imgContour = img.copy()
 getContours(mask)
 
 # ve vong tron
-# if cres[3][1]<cres[7][1]:
-#     tam = (cres[3]+cres[8])//2
-#     r = int(np.linalg.norm(tam - cres[3]))
-# else:
-#     tam = (cres[4]+cres[7])//2
-#     r = int(np.linalg.norm(tam - cres[4]))
-# for i in range(9):
-#     print(cres[i])
-# cv2.circle(imgContour,(tam[0],tam[1]),r,(0,0,255),2)
+if cres[3][1]<cres[7][1]:
+    tam = (cres[3]+cres[8])//2
+    r = int(np.linalg.norm(tam - cres[3]))
+else:
+    tam = (cres[4]+cres[7])//2
+    r = int(np.linalg.norm(tam - cres[4]))
+for i in range(9):
+    print(cres[i])
+cv2.circle(imgContour,(tam[0],tam[1]),r,(0,0,255),2)
 while True:
     
     cv2.imshow("a",imgContour)
