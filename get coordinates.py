@@ -1,5 +1,5 @@
 import cv2
-import numpy as np
+import ny as np
 import math
 
 # h_cam : chieu cao camera
