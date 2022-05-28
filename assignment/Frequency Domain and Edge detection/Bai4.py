@@ -1,11 +1,9 @@
 import cv2
 import math
 import numpy as np
+from matplotlib import pyplot as plt
 
 img = cv2.imread("Lena.png")
-print(img[0][0])
-img2 = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-print(img2[0][0])
 
 
 def HSV2RGB(img):
@@ -65,14 +63,14 @@ def changeHSV(img_HSV, h_change=0, s_change=0, v_change=0):
         for j in i:
             j[0] = np.clip(j[0]+h_change, 0, 360)
             j[1] = np.clip(j[1]+s_change, 0, 1.0)
-            
+
             j[2] = np.clip(j[2]+v_change, 0, 255)
     return img_re
 
 
-imgHSV = changeHSV(RGB2HSV(img), 80, 0, 0)
+imgHSV = changeHSV(RGB2HSV(img), 0, 0, 150)
 img_re = HSV2RGB(imgHSV)
-# print(imgHSV)
-cv2.imshow("ori", img)
-cv2.imshow("tets", img_re)
+
+result = np.hstack((img,img_re))
+cv2.imshow("original image\t\t\t\t\t\t\t\tafter change HSV",result)
 cv2.waitKey(0)
