@@ -8,7 +8,7 @@ from skimage import color
 from skimage.transform import pyramid_gaussian
 
 
-image = cv2.imread('/home/kiencate/Documents/Tu_Hoc/image-processing/Project/Pedestrian_Detection/sample_images/pedestrian.jpg')
+image = cv2.imread('test/12.jpg')
 image = cv2.resize(image,(400,256))
 size = (64,128)
 step_size = (9,9)
@@ -17,7 +17,7 @@ downscale = 1.25
 detections = []
 #The current scale of the image 
 scale = 0
-model = joblib.load('/home/kiencate/Documents/Tu_Hoc/image-processing/Project/PersonDetection/models/models.dat')
+model = joblib.load('models/models.dat')
 for im_scaled in pyramid_gaussian(image, downscale = downscale):
     #The list contains detections at the current scale
     if im_scaled.shape[0] < size[1] or im_scaled.shape[1] < size[0]:
