@@ -3,20 +3,18 @@ from skimage.transform import pyramid_gaussian
 from imutils.object_detection import non_max_suppression
 import imutils
 from skimage.feature import hog
-import pafy,joblib,cv2
+import joblib,cv2
 from skimage import color
 import Sliding as sd
 size = (64,128)
 step_size = (10,10)
 downscale = 1.25
-model = joblib.load('models/models.dat')
+model = joblib.load('/home/kiencate/Documents/Tu_Hoc/image-processing/Project/models/models.dat')
 
 # real time person detection 
 
-url = 'https://youtu.be/NyLF8nHIquM'
-vPafy = pafy.new(url)
-play = vPafy.getbest(preftype="mp4")
-cap = cv2.VideoCapture(play.url)
+
+cap = cv2.VideoCapture(0)
 
 while True:
     ret,frame = cap.read()
@@ -32,7 +30,7 @@ while True:
             if window.shape[0] != size[1] or window.shape[1] != size[0]:
                 continue
             window = color.rgb2gray(window)
-            fd=hog(window, orientations=9,pixels_per_cell=(8,8),visualize=False,cells_per_block=(3,3))
+            fd=hog(window, orientations=9,pixels_per_cell=(8,8),visualize=False,cells_per_block=(2,2))
             fd = fd.reshape(1, -1)
             pred = model.predict(fd)
 

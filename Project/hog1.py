@@ -3,10 +3,10 @@ import cv2
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-
-
+import time
+from skimage.feature import hog
 class Hog_descriptor():
-    def __init__(self, img, cell_size=16, bin_size=9):
+    def __init__(self, img, cell_size=8, bin_size=9):
         self.img = img
         self.img = np.sqrt(img / float(np.max(img)))
         self.img = self.img * 255
@@ -31,8 +31,8 @@ class Hog_descriptor():
                 cell_gradient_vector[i][j] = self.cell_gradient(cell_magnitude, cell_angle)
 
         # hog_image = self.render_gradient(np.zeros([height, width]), cell_gradient_vector)
-        hog_image = 0
         hog_vector = []
+        start = time.time()
         for i in range(cell_gradient_vector.shape[0] - 1):
             for j in range(cell_gradient_vector.shape[1] - 1):
                 block_vector = []
@@ -40,22 +40,29 @@ class Hog_descriptor():
                 block_vector.extend(cell_gradient_vector[i][j + 1])
                 block_vector.extend(cell_gradient_vector[i + 1][j])
                 block_vector.extend(cell_gradient_vector[i + 1][j + 1])
-                mag = lambda vector: math.sqrt(sum(i ** 2 for i in vector))
-                magnitude = mag(block_vector)
-                if magnitude != 0:
-                    normalize = lambda block_vector, magnitude: [element / magnitude for element in block_vector]
-                    block_vector = normalize(block_vector, magnitude)
-                hog_vector.append(block_vector)
-        return hog_vector, hog_image
+                mag = np.linalg.norm(block_vector)
+                # mag = lambda vector: math.sqrt(sum(i ** 2 for i in vector))
+                # magnitude = mag(block_vector)
+                # if magnitude != 0:
+                #     normalize = lambda block_vector, magnitude: [element / magnitude for element in block_vector]
+                #     block_vector = normalize(block_vector, magnitude)
+                hog_vector.append(block_vector/mag)
+        stop = time.time()
+        # print("block: ",stop-start)
+        return hog_vector
 
     def global_gradient(self):
+        start = time.time()
         gradient_values_x = cv2.Sobel(self.img, cv2.CV_64F, 1, 0, ksize=5)
         gradient_values_y = cv2.Sobel(self.img, cv2.CV_64F, 0, 1, ksize=5)
         gradient_magnitude = cv2.addWeighted(gradient_values_x, 0.5, gradient_values_y, 0.5, 0)
         gradient_angle = cv2.phase(gradient_values_x, gradient_values_y, angleInDegrees=True)
+        stop = time.time()
+        # print("global gradient:",stop - start)
         return gradient_magnitude, gradient_angle
 
     def cell_gradient(self, cell_magnitude, cell_angle):
+        start = time.time()
         orientation_centers = [0] * self.bin_size
         for i in range(cell_magnitude.shape[0]):
             for j in range(cell_magnitude.shape[1]):
@@ -64,6 +71,8 @@ class Hog_descriptor():
                 min_angle, max_angle, mod = self.get_closest_bins(gradient_angle)
                 orientation_centers[min_angle] += (gradient_strength * (1 - (mod / self.angle_unit)))
                 orientation_centers[max_angle] += (gradient_strength * (mod / self.angle_unit))
+        stop = time.time()
+        # print("cell gradient:",stop - start)
         return orientation_centers
 
     def get_closest_bins(self, gradient_angle):
@@ -91,10 +100,11 @@ class Hog_descriptor():
                     cv2.line(image, (y1, x1), (y2, x2), int(255 * math.sqrt(magnitude)))
                     angle += angle_gap
         return image
+start = time.time()
+img = cv2.imread('/home/kiencate/Documents/Tu_Hoc/image-processing/Project/DATAIMAGE/positive/crop_000010a.png', 0)
+hog1 = Hog_descriptor(img, cell_size=8, bin_size=9)
+vector = hog1.extract()
+print(np.array(vector).shape)
+stop = time.time()
+print(stop - start)
 
-# img = cv2.imread('/home/kiencate/Documents/Tu_Hoc/image-processing/assignment/Frequency Domain and Edge detection/Lena.png', cv2.IMREAD_GRAYSCALE)
-# hog = Hog_descriptor(img, cell_size=8, bin_size=9)
-# vector, image = hog.extract()
-# print(vector)
-# plt.imshow(image)
-# plt.show()

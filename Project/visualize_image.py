@@ -6,9 +6,9 @@ import imutils
 from skimage.feature import hog
 from skimage import color
 from skimage.transform import pyramid_gaussian
-
-
-image = cv2.imread('test/12.jpg')
+from hog1 import Hog_descriptor
+import time
+image = cv2.imread('test/test.jpg')
 image = cv2.resize(image,(400,256))
 size = (64,128)
 step_size = (9,9)
@@ -18,6 +18,7 @@ detections = []
 #The current scale of the image 
 scale = 0
 model = joblib.load('models/models.dat')
+start = time.time()
 for im_scaled in pyramid_gaussian(image, downscale = downscale):
     #The list contains detections at the current scale
     if im_scaled.shape[0] < size[1] or im_scaled.shape[1] < size[0]:
@@ -26,7 +27,8 @@ for im_scaled in pyramid_gaussian(image, downscale = downscale):
         if window.shape[0] != size[1] or window.shape[1] != size[0]:
             continue
         window = color.rgb2gray(window)
-            
+        # fd= Hog_descriptor(window,8,9).extract()   
+        # fd = np.array(fd)
         fd=hog(window, orientations=9,pixels_per_cell=(8,8),visualize=False,cells_per_block=(2,2))
         fd = fd.reshape(1, -1)
         pred = model.predict(fd)
@@ -48,5 +50,7 @@ for(x1, y1, x2, y2) in pick:
     cv2.rectangle(clone, (x1, y1), (x2, y2), (0, 255, 0), 2)
     cv2.putText(clone,'Person',(x1-2,y1-2),1,0.75,(121,12,34),1)
 cv2.imshow('Person Detection',clone)
+stop = time.time()
+print("time:",start-stop)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
