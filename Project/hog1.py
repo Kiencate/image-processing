@@ -1,110 +1,53 @@
-from tokenize import String
 import cv2
 import numpy as np
-import math
 import matplotlib.pyplot as plt
-import time
-from skimage.feature import hog
-class Hog_descriptor():
-    def __init__(self, img, cell_size=8, bin_size=9):
-        self.img = img
-        self.img = np.sqrt(img / float(np.max(img)))
-        self.img = self.img * 255
-        self.cell_size = cell_size
-        self.bin_size = bin_size
-        self.angle_unit = int(360 / self.bin_size)
-        assert type(self.bin_size) == int, "bin_size should be integer,"
-        assert type(self.cell_size) == int, "cell_size should be integer,"
-        assert type(self.angle_unit) == int, "bin_size should be divisible by 360"
+from numpy import linalg as LA
+import warnings
+warnings.filterwarnings("ignore")
 
-    def extract(self):
-        height, width = self.img.shape
-        gradient_magnitude, gradient_angle = self.global_gradient()
-        gradient_magnitude = abs(gradient_magnitude)
-        cell_gradient_vector = np.zeros((int(height / self.cell_size), int(width / self.cell_size), self.bin_size))
-        for i in range(cell_gradient_vector.shape[0]):
-            for j in range(cell_gradient_vector.shape[1]):
-                cell_magnitude = gradient_magnitude[i * self.cell_size:(i + 1) * self.cell_size,
-                                 j * self.cell_size:(j + 1) * self.cell_size]
-                cell_angle = gradient_angle[i * self.cell_size:(i + 1) * self.cell_size,
-                             j * self.cell_size:(j + 1) * self.cell_size]
-                cell_gradient_vector[i][j] = self.cell_gradient(cell_magnitude, cell_angle)
+def hog_feature(img_gray, cell_size=8, block_size=2, bins=9):
+    img = img_gray
+    h, w = img.shape # 128, 64
+    # gradient
+    xkernel = np.array([[-1, 0, 1]])
+    ykernel = np.array([[-1], [0], [1]])
+    dx = cv2.filter2D(img, cv2.CV_32F, xkernel)
+    dy = cv2.filter2D(img, cv2.CV_32F, ykernel)
+    
+    # histogram
+    magnitude = np.sqrt(np.square(dx) + np.square(dy))
+    orientation = np.arctan(np.divide(dy, dx+0.00001)) # radian
+    orientation = np.degrees(orientation) # -90 -> 90
+    orientation += 90 # 0 -> 180
+    
+    num_cell_x = w // cell_size # 8
+    num_cell_y = h // cell_size # 16
+    hist_tensor = np.zeros([num_cell_y, num_cell_x, bins]) # 16 x 8 x 9
+    for cx in range(num_cell_x):
+        for cy in range(num_cell_y):
+            ori = orientation[cy*cell_size:cy*cell_size+cell_size, cx*cell_size:cx*cell_size+cell_size]
+            mag = magnitude[cy*cell_size:cy*cell_size+cell_size, cx*cell_size:cx*cell_size+cell_size]
+            hist, _ = np.histogram(ori, bins=bins, range=(0, 180), weights=mag) # 1-D vector, 9 elements
+            hist_tensor[cy, cx, :] = hist
+        pass
+    pass
+    
+    # normalization
+    redundant_cell = block_size-1
+    feature_tensor = np.zeros([num_cell_y-redundant_cell, num_cell_x-redundant_cell, block_size*block_size*bins])
+    for bx in range(num_cell_x-redundant_cell): # 7
+        for by in range(num_cell_y-redundant_cell): # 15
+            by_from = by
+            by_to = by+block_size
+            bx_from = bx
+            bx_to = bx+block_size
+            v = hist_tensor[by_from:by_to, bx_from:bx_to, :].flatten() # to 1-D array (vector)
+            feature_tensor[by, bx, :] = v / LA.norm(v, 2)
+            # avoid NaN:
+            if np.isnan(feature_tensor[by, bx, :]).any(): # avoid NaN (zero division)
+                feature_tensor[by, bx, :] = v
+    
+    return feature_tensor.flatten()
 
-        # hog_image = self.render_gradient(np.zeros([height, width]), cell_gradient_vector)
-        hog_vector = []
-        start = time.time()
-        for i in range(cell_gradient_vector.shape[0] - 1):
-            for j in range(cell_gradient_vector.shape[1] - 1):
-                block_vector = []
-                block_vector.extend(cell_gradient_vector[i][j])
-                block_vector.extend(cell_gradient_vector[i][j + 1])
-                block_vector.extend(cell_gradient_vector[i + 1][j])
-                block_vector.extend(cell_gradient_vector[i + 1][j + 1])
-                mag = np.linalg.norm(block_vector)
-                # mag = lambda vector: math.sqrt(sum(i ** 2 for i in vector))
-                # magnitude = mag(block_vector)
-                # if magnitude != 0:
-                #     normalize = lambda block_vector, magnitude: [element / magnitude for element in block_vector]
-                #     block_vector = normalize(block_vector, magnitude)
-                hog_vector.append(block_vector/mag)
-        stop = time.time()
-        # print("block: ",stop-start)
-        return hog_vector
 
-    def global_gradient(self):
-        start = time.time()
-        gradient_values_x = cv2.Sobel(self.img, cv2.CV_64F, 1, 0, ksize=5)
-        gradient_values_y = cv2.Sobel(self.img, cv2.CV_64F, 0, 1, ksize=5)
-        gradient_magnitude = cv2.addWeighted(gradient_values_x, 0.5, gradient_values_y, 0.5, 0)
-        gradient_angle = cv2.phase(gradient_values_x, gradient_values_y, angleInDegrees=True)
-        stop = time.time()
-        # print("global gradient:",stop - start)
-        return gradient_magnitude, gradient_angle
-
-    def cell_gradient(self, cell_magnitude, cell_angle):
-        start = time.time()
-        orientation_centers = [0] * self.bin_size
-        for i in range(cell_magnitude.shape[0]):
-            for j in range(cell_magnitude.shape[1]):
-                gradient_strength = cell_magnitude[i][j]
-                gradient_angle = cell_angle[i][j]
-                min_angle, max_angle, mod = self.get_closest_bins(gradient_angle)
-                orientation_centers[min_angle] += (gradient_strength * (1 - (mod / self.angle_unit)))
-                orientation_centers[max_angle] += (gradient_strength * (mod / self.angle_unit))
-        stop = time.time()
-        # print("cell gradient:",stop - start)
-        return orientation_centers
-
-    def get_closest_bins(self, gradient_angle):
-        idx = int(gradient_angle / self.angle_unit)
-        mod = gradient_angle % self.angle_unit
-        if idx == self.bin_size:
-            return idx - 1, (idx) % self.bin_size, mod
-        return idx, (idx + 1) % self.bin_size, mod
-
-    def render_gradient(self, image, cell_gradient):
-        cell_width = self.cell_size / 2
-        max_mag = np.array(cell_gradient).max()
-        for x in range(cell_gradient.shape[0]):
-            for y in range(cell_gradient.shape[1]):
-                cell_grad = cell_gradient[x][y]
-                cell_grad /= max_mag
-                angle = 0
-                angle_gap = self.angle_unit
-                for magnitude in cell_grad:
-                    angle_radian = math.radians(angle)
-                    x1 = int(x * self.cell_size + magnitude * cell_width * math.cos(angle_radian))
-                    y1 = int(y * self.cell_size + magnitude * cell_width * math.sin(angle_radian))
-                    x2 = int(x * self.cell_size - magnitude * cell_width * math.cos(angle_radian))
-                    y2 = int(y * self.cell_size - magnitude * cell_width * math.sin(angle_radian))
-                    cv2.line(image, (y1, x1), (y2, x2), int(255 * math.sqrt(magnitude)))
-                    angle += angle_gap
-        return image
-start = time.time()
-img = cv2.imread('/home/kiencate/Documents/Tu_Hoc/image-processing/Project/DATAIMAGE/positive/crop_000010a.png', 0)
-hog1 = Hog_descriptor(img, cell_size=8, bin_size=9)
-vector = hog1.extract()
-print(np.array(vector).shape)
-stop = time.time()
-print(stop - start)
 

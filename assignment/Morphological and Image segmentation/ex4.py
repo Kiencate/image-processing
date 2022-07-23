@@ -9,7 +9,6 @@ _,image_bin = cv2.threshold(image_gray,210,255,cv2.THRESH_BINARY_INV)
 contours, hierarchy = cv2.findContours(image_bin, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
 for cnt in contours:
-    print ("ok")
     peri = cv2.arcLength(cnt, True)
     s = cv2.contourArea(cnt)
     approx = cv2.approxPolyDP(cnt, 0.02*peri, True)
